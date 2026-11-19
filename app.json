@@ -1,0 +1,27 @@
+{
+  "package_id": "io.github.gstudy",
+  "edition": "202601",
+  "name": "G2 Study",
+  "version": "0.1.0",
+  "min_sdk_version": "0.0.16",
+  "entrypoint": "index.html",
+  "supported_languages": ["en"],
+  "permissions": [
+    {
+      "name": "g2-microphone",
+      "desc": "Records lectures through the glasses microphones so they can be turned into flashcards."
+    },
+    {
+      "name": "phone-microphone",
+      "desc": "Optional: records lectures with the phone microphone instead of the glasses."
+    },
+    {
+      "name": "network",
+      "desc": "Sends lecture audio and text to the transcription and card-generation services you configure, and looks up Swiss train connections.",
+      "whitelist": [
+        "https://api.openai.com",
+        "https://transport.opendata.ch"
+      ]
+    }
+  ]
+}
