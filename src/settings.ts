@@ -98,6 +98,15 @@ export class SettingsStore {
     return draft;
   }
 
+  /** Change settings for this page load only, without saving them. */
+  overrideForSession(mutator: (draft: Settings) => void): Settings {
+    const draft = structuredClone(this.value);
+    mutator(draft);
+    this.value = draft;
+    this.listeners.forEach((l) => l(draft));
+    return draft;
+  }
+
   subscribe(l: Listener): () => void {
     this.listeners.add(l);
     return () => this.listeners.delete(l);

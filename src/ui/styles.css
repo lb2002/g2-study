@@ -278,6 +278,14 @@ select {
 .notice span {
   flex: 1;
 }
+.notice.rec {
+  border-color: rgba(255, 77, 77, 0.45);
+  background: rgba(255, 77, 77, 0.08);
+}
+.notice .rec-dot {
+  flex: none;
+  animation: pulse 1.2s ease-in-out infinite;
+}
 .notice svg {
   color: var(--accent);
 }

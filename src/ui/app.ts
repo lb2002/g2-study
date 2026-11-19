@@ -21,6 +21,7 @@ export class PhoneUI {
   private pendingRender = false;
   private commute?: CommuteOffer;
   private commuteLoading = false;
+  private commuteStale = false;
   private openTranscript = new Set<string>();
   private cardFilter = '';
 
@@ -43,7 +44,10 @@ export class PhoneUI {
     this.renderNav();
     this.render();
 
-    this.app.changed.on(() => this.scheduleRender());
+    this.app.changed.on(() => {
+      this.commuteStale = true;
+      this.scheduleRender();
+    });
     this.app.recorderStatus.on(() => this.updateRecordingLive());
     this.root.addEventListener('focusout', () => {
       if (this.pendingRender) setTimeout(() => this.scheduleRender(), 0);
@@ -130,7 +134,11 @@ export class PhoneUI {
     const week = reviews.filter((r) => r.at > Date.now() - 7 * 86400000);
     const newToday = Math.min(st.newCards, s.review.newCardsPerDay);
 
-    if (!this.commute && !this.commuteLoading) void this.loadCommute();
+    // The deck changed since the last offer: recount (the timetable itself is cached in the core).
+    if ((!this.commute || this.commuteStale) && !this.commuteLoading) {
+      this.commuteStale = false;
+      void this.loadCommute();
+    }
 
     return h(
       'div',
@@ -142,6 +150,9 @@ export class PhoneUI {
         stat(newToday, 'new today'),
         stat(st.total, 'in deck'),
       ),
+      this.app.recorder.current.recording
+        ? h('button', { class: 'notice rec', onclick: () => this.go('capture') }, h('span', { class: 'rec-dot' }), h('span', null, 'Recording a lecture'), icon('chevron'))
+        : null,
       drafts
         ? h('button', { class: 'notice', onclick: () => this.go('cards') }, icon('sparkle'), h('span', null, `${drafts} new card${drafts === 1 ? '' : 's'} waiting for your check`), icon('chevron'))
         : null,
@@ -180,7 +191,7 @@ export class PhoneUI {
     if (this.commuteLoading && !force) return;
     this.commuteLoading = true;
     try {
-      this.commute = await this.app.commuteOffer();
+      this.commute = await this.app.commuteOffer(Date.now(), force);
     } finally {
       this.commuteLoading = false;
       if (this.tab === 'study') this.scheduleRender();

@@ -41,6 +41,8 @@ export class StudyApp {
   readonly recorder: LectureRecorder;
   private queue: TranscriptionQueue;
   private lastCommute?: CommuteOffer;
+  /** Timetable answers are reused for a minute; card counts are always recomputed. */
+  private connCache?: { key: string; at: number; conns: Awaited<ReturnType<typeof fetchConnections>> };
 
   constructor(
     readonly store: Store,
@@ -294,15 +296,19 @@ export class StudyApp {
 
   // --- commute ---------------------------------------------------------------
 
-  async commuteOffer(now = Date.now()): Promise<CommuteOffer> {
+  async commuteOffer(now = Date.now(), refresh = false): Promise<CommuteOffer> {
+    if (refresh) this.connCache = undefined;
     const s = this.settings.get();
     const reviews = await this.store.recentReviews(200);
     const spc = secondsPerCard(reviews, s.commute.defaultSecondsPerCard);
     let error: string | undefined;
     let plan: CommutePlan;
     try {
-      const conns = await fetchConnections(s.commute.from, s.commute.to, { limit: 4 });
-      const conn = nextCatchable(conns, now);
+      const key = `${s.commute.from}|${s.commute.to}`;
+      if (!this.connCache || this.connCache.key !== key || Date.now() - this.connCache.at > 60_000) {
+        this.connCache = { key, at: Date.now(), conns: await fetchConnections(s.commute.from, s.commute.to, { limit: 4 }) };
+      }
+      const conn = nextCatchable(this.connCache.conns, now);
       if (!conn) throw new Error('No upcoming connection found');
       plan = planCommute({ connection: conn, bufferMin: s.commute.bufferMin, secondsPerCard: spc, now });
     } catch (err) {
