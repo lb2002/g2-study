@@ -38,6 +38,10 @@ export class GlassesController {
     private app: StudyApp,
     private host: GlassesHost,
   ) {
+    // Commute rounds end on the clock, even if nobody touches the glasses.
+    setInterval(() => {
+      if (this.view.k === 'review' && this.view.commute && !this.busy) void this.render();
+    }, 1000);
     host.onGesture((g) => void this.onGesture(g));
     app.changed.on(() => void this.onAppChanged());
     app.recorderStatus.on(() => {
@@ -107,9 +111,8 @@ export class GlassesController {
           return this.render();
         }
         if (s.isRevealed && (g.type === 'up' || g.type === 'down')) {
-          await this.app.answer(s, g.type === 'up' ? 'good' : 'again', v.clock?.scale ?? 1);
-          if (s.isOver) return this.finishReview(false);
-          return this.render();
+          await this.app.answer(s, g.type === 'up' ? 'good' : 'again');
+          return this.render(); // render() turns an ended session into the summary
         }
         return;
       }
@@ -193,7 +196,7 @@ export class GlassesController {
   private async beginCommuteRound(offer: CommuteOffer) {
     const clock = new VirtualClock(Math.max(1, this.app.settings.get().demo.timeScale));
     // Re-plan from "now" so time spent looking at the offer is accounted for.
-    const session = await this.app.startReview({ limit: offer.plan.capacity, endsAt: offer.plan.endsAt, now: clock.now });
+    const session = await this.app.startReview({ limit: offer.plan.capacity, endsAt: offer.plan.endsAt, now: clock.now, timeScale: clock.scale });
     if (!session.current) {
       this.view = { k: 'message', header: 'Commute round', title: 'Nothing to review', body: 'No cards are due and no new cards are left for today. Enjoy the view.' };
     } else {
@@ -207,7 +210,9 @@ export class GlassesController {
     const { session, commute } = this.view;
     if (byUser) session.stop();
     const r = session.result();
-    if (r.reviewed === 0) return this.goHome();
+    if (r.reviewed === 0 && !commute) return this.goHome();
+    // Switch view first so the 1 s tick cannot finish the same round twice.
+    this.view = { k: 'message', header: commute ? 'Commute round' : 'Review', title: '...', body: '' };
     const st = await this.app.stats();
     this.view = {
       k: 'message',
@@ -225,6 +230,7 @@ export class GlassesController {
   // --- rendering -----------------------------------------------------------------
 
   async render() {
+    if (this.view.k === 'review' && this.view.session.isOver) return this.finishReview(false);
     const seq = ++this.renderSeq;
     const page = await this.pageFor();
     if (seq !== this.renderSeq) return; // a newer render superseded this one
@@ -324,10 +330,10 @@ function summaryTitle(r: SessionResult, commute?: CommuteOffer): string {
 }
 
 function summaryBody(r: SessionResult, nextDueAt?: number): string {
-  const parts = [`${r.reviewed} cards: ${r.good} knew, ${r.again} again.`, `${r.avgSeconds} s per card.`];
-  if (r.leftInQueue > 0) parts.push(`${r.leftInQueue} left for next time.`);
-  else if (nextDueAt) parts.push(`Next due ${relTime(nextDueAt)}.`);
-  return parts.join(' ');
+  const parts = [`${r.reviewed} cards   ↑ ${r.good}   ↓ ${r.again}`, `${r.avgSeconds} s per card`];
+  if (r.leftInQueue > 0) parts.push(`${r.leftInQueue} left for next time`);
+  else if (nextDueAt) parts.push(`Next card due ${relTime(nextDueAt)}`);
+  return parts.join('\n');
 }
 
 export function relTime(at: number, now = Date.now()): string {

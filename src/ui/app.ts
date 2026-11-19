@@ -315,7 +315,7 @@ export class PhoneUI {
 
   private updateRecordingLive() {
     const box = this.recordBox;
-    if (!box || !box.isConnected) return;
+    if (!box || this.tab !== 'capture') return;
     const s = this.app.recorder.current;
     const settings = this.app.settings.get();
     const noBackend = !this.app.transcriber();

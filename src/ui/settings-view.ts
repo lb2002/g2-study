@@ -157,6 +157,7 @@ export function renderSettings(app: StudyApp): HTMLElement {
         ['1', 'Real time'],
         ['10', '10x faster (demo)'],
         ['30', '30x faster (demo)'],
+        ['60', '60x faster (demo)'],
       ]),
       h('small', { class: 'muted' }, 'The demo clock lets a 20 min ride end in about a minute, so the auto-stop can be shown on video.'),
     ),

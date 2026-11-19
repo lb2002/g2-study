@@ -35,7 +35,7 @@ export function planCommute(opts: {
     return {
       connection: c,
       endsAt,
-      studyMinutes: Math.floor(studyMs / 60_000),
+      studyMinutes: Math.round(studyMs / 60_000),
       rideMinutes: Math.round((c.arrival - c.departure) / 60_000),
       secondsPerCard: spc,
       capacity: Math.floor(studyMs / 1000 / spc),

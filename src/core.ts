@@ -92,7 +92,11 @@ export class StudyApp {
   async acceptCards(ids: string[]) {
     const all = await this.store.listCards();
     const now = Date.now();
-    const updated = all.filter((c) => ids.includes(c.id)).map((c, i) => ({ ...c, status: 'active' as const, createdAt: now + i }));
+    // Keep lecture order so new cards are introduced in the order they were taught.
+    const updated = all
+      .filter((c) => ids.includes(c.id))
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((c, i) => ({ ...c, status: 'active' as const, createdAt: now + i }));
     await this.store.putCards(updated);
     this.changed.emit();
   }
@@ -137,9 +141,10 @@ export class StudyApp {
   }
 
   /** Text, notes, a transcript or text copied from a PDF. */
-  async importText(title: string, text: string): Promise<Lecture> {
+  async importText(title: string, text: string, opts: { wait?: boolean } = {}): Promise<Lecture> {
     const lecture = await this.newLecture(title || defaultTitle('Notes'), 'text', 'generating', text.trim());
-    void this.generateFor(lecture.id);
+    const job = this.generateFor(lecture.id);
+    if (opts.wait) await job;
     return lecture;
   }
 
@@ -261,7 +266,8 @@ export class StudyApp {
 
   // --- review ----------------------------------------------------------------
 
-  async startReview(opts: { limit?: number; endsAt?: number; now?: () => number } = {}): Promise<ReviewSession> {
+  /** `timeScale` > 1 when `now` is a sped-up demo clock: a card then uses scale x more clock time. */
+  async startReview(opts: { limit?: number; endsAt?: number; now?: () => number; timeScale?: number } = {}): Promise<ReviewSession> {
     const s = this.settings.get();
     const cards = await this.store.listCards();
     const reviews = await this.store.recentReviews(500);
@@ -274,14 +280,15 @@ export class StudyApp {
       endsAt: opts.endsAt,
       secondsPerCard: secondsPerCard(reviews, s.commute.defaultSecondsPerCard),
       now: opts.now,
+      timeScale: opts.timeScale,
     });
   }
 
-  async answer(session: ReviewSession, verdict: Verdict, timeScale = 1) {
+  async answer(session: ReviewSession, verdict: Verdict) {
     const res = session.answer(verdict);
     if (!res) return;
     await this.store.putCard(res.card);
-    await this.store.putReview({ ...res.log, id: uid('r'), durationMs: Math.round(res.log.durationMs / timeScale) });
+    await this.store.putReview({ ...res.log, id: uid('r') });
     this.changed.emit();
   }
 

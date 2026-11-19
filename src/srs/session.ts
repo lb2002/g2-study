@@ -5,9 +5,12 @@ export interface SessionOptions {
   id: string;
   /** Commute rounds end at a wall-clock time; plain rounds end when the queue is empty. */
   endsAt?: number;
+  /** Real (wall-clock) seconds the user needs per card. */
   secondsPerCard: number;
   /** Clock, injectable so the demo can run a 20 min ride in one minute and tests can control time. */
   now?: () => number;
+  /** How much faster `now` runs than real time (demo clock). Durations are reported in real time. */
+  timeScale?: number;
 }
 
 export interface SessionResult {
@@ -35,6 +38,7 @@ export class ReviewSession {
   readonly total: number;
   readonly endsAt?: number;
   private readonly spc: number;
+  private readonly scale: number;
   private readonly now: () => number;
 
   constructor(cards: StudyCard[], opts: SessionOptions) {
@@ -43,6 +47,7 @@ export class ReviewSession {
     this.total = cards.length;
     this.endsAt = opts.endsAt;
     this.spc = opts.secondsPerCard;
+    this.scale = Math.max(1, opts.timeScale ?? 1);
     this.now = opts.now ?? Date.now;
     this.shownAt = this.now();
   }
@@ -68,7 +73,7 @@ export class ReviewSession {
     if (this.ended) return true;
     if (this.pos >= this.queue.length) return true;
     // Do not start a card we cannot finish before the stop time.
-    if (this.endsAt !== undefined && !this.revealed && this.now() + this.spc * 1000 > this.endsAt) return true;
+    if (this.endsAt !== undefined && !this.revealed && this.now() + this.spc * 1000 * this.scale > this.endsAt) return true;
     return false;
   }
 
@@ -85,7 +90,7 @@ export class ReviewSession {
     const card = this.current;
     if (!card || !this.revealed) return undefined;
     const at = this.now();
-    const durationMs = at - this.shownAt;
+    const durationMs = Math.round((at - this.shownAt) / this.scale);
     const graded = grade(card, verdict, new Date(at));
     this.queue[this.pos] = graded;
     this.stats[verdict]++;

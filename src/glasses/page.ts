@@ -101,7 +101,7 @@ export function wrapLines(text: string, widthPx: number): string[] {
   const out: string[] = [];
   for (const para of text.split('\n')) {
     let line = '';
-    for (const word of para.split(/ +/)) {
+    for (const word of para.split(' ')) {
       const candidate = line ? `${line} ${word}` : word;
       if (textWidth(candidate) <= widthPx || !line) {
         line = candidate;

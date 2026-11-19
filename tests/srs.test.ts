@@ -108,6 +108,21 @@ describe('ReviewSession', () => {
     expect(s.minutesLeft()).toBe(0);
   });
 
+  it('on a sped-up demo clock, plans in clock time but reports real seconds', () => {
+    let now = T0;
+    // 60x clock, 10 real s per card = 10 clock minutes per card, 25 clock minutes left.
+    const s = new ReviewSession(['a', 'b', 'c', 'd'].map((id) => card(id)), { id: 's', secondsPerCard: 10, timeScale: 60, endsAt: T0 + 25 * MIN, now: () => now });
+    let shown = 0;
+    while (s.current) {
+      shown++;
+      s.reveal();
+      now += 4000 * 60; // the user takes 4 real seconds
+      s.answer('good');
+    }
+    expect(shown).toBe(4); // starts at 0, 4, 8, 12 min; at 16 min a card would run to 26 > 25
+    expect(s.result().avgSeconds).toBe(4);
+  });
+
   it('lets you finish the card on screen even if time runs out mid-card', () => {
     let now = T0;
     const s = new ReviewSession([card('a'), card('b')], { id: 's', secondsPerCard: 10, endsAt: T0 + 15_000, now: () => now });
