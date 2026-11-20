@@ -330,7 +330,7 @@ function summaryTitle(r: SessionResult, commute?: CommuteOffer): string {
 }
 
 function summaryBody(r: SessionResult, nextDueAt?: number): string {
-  const parts = [`${r.reviewed} cards   ↑ ${r.good}   ↓ ${r.again}`, `${r.avgSeconds} s per card`];
+  const parts = [`${r.reviewed} ${r.reviewed === 1 ? "card" : "cards"}   ↑ ${r.good}   ↓ ${r.again}`, `${r.avgSeconds} s per card`];
   if (r.leftInQueue > 0) parts.push(`${r.leftInQueue} left for next time`);
   else if (nextDueAt) parts.push(`Next card due ${relTime(nextDueAt)}`);
   return parts.join('\n');
