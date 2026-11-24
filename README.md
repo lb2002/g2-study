@@ -4,7 +4,9 @@
 
 G2 Study is an [Even Hub](https://hub.evenrealities.com/docs/get-started/overview) plugin. It listens to a lecture through the glasses microphones, turns the transcript into short flashcards with an LLM, and lets you review them on the glasses with the temple touchpad or R1 ring. On the way home it looks up your train and plans a round that ends two minutes before you arrive.
 
-![Review round on the glasses, recorded in the Even Hub simulator](docs/media/review.gif)
+[![Demo video: record, transcribe, check cards, review, commute round](docs/media/demo-poster.jpg)](docs/media/g2-study-demo.mp4)
+
+**[Watch the demo (1:49)](docs/media/g2-study-demo.mp4)**, recorded in the official simulator.
 
 > **Status: tested in the Even Hub simulator only.** I do not have G2 hardware yet. Everything below was run in `evenhub-simulator` 0.9.5 against SDK 0.0.16; real-device behaviour (Bluetooth timing, long recordings with the phone locked) is untested. See [Open risks](#open-risks).
 
